@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pilates App</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.app{max-width:600px;margin:0 auto;padding:1rem}
+.header{background:#1a1a1a;color:white;padding:1rem 1.25rem;border-radius:12px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:18px;font-weight:500}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0}
+.sync-dot.offline{background:#f87171}
+.sync-dot.syncing{background:#fbbf24;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.tab-bar{display:flex;background:white;border-radius:10px;padding:4px;margin-bottom:1rem;gap:4px;border:0.5px solid #e5e5e5}
+.tab{flex:1;padding:8px;font-size:13px;border:none;background:none;cursor:pointer;border-radius:7px;color:#666;font-family:system-ui,sans-serif}
+.tab.active{background:#1a1a1a;color:white;font-weight:500}
+.card{background:white;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;margin-bottom:10px}
+.section{display:none}.section.active{display:block}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.stat{background:white;border-radius:10px;padding:12px;text-align:center;border:0.5px solid #e5e5e5}
+.stat-val{font-size:22px;font-weight:500}
+.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.alumno-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid #f0f0f0}
+.alumno-row:last-child{border-bottom:none}
+.avatar{width:36px;height:36px;border-radius:50%;background:#e8e4ff;color:#5b4fcf;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0}
+.check{width:30px;height:30px;border-radius:50%;border:0.5px solid #ddd;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;transition:all .15s}
+.check.presente{background:#dcfce7;border-color:#86efac;color:#16a34a}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.badge-ok{background:#dcfce7;color:#15803d}
+.badge-warn{background:#fef9c3;color:#854d0e}
+.badge-danger{background:#fee2e2;color:#b91c1c}
+.btn{padding:7px 14px;font-size:13px;border-radius:8px;cursor:pointer;border:0.5px solid #ddd;background:white;font-family:system-ui,sans-serif;color:#1a1a1a}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#1a1a1a;color:white;border-color:#1a1a1a}
+.btn-primary:hover{opacity:0.85}
+.btn-success{background:none;border-color:#86efac;color:#16a34a;font-size:12px;padding:4px 10px}
+.btn-undo{background:none;border-color:#ddd;color:#888;font-size:12px;padding:4px 10px}
+.flex-between{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.movimiento{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #f0f0f0;font-size:14px}
+.movimiento:last-child{border-bottom:none}
+.ing{color:#16a34a;font-weight:500}
+.egr{color:#dc2626;font-weight:500}
+.horario-tag{font-size:11px;padding:2px 7px;border-radius:20px;background:#f5f5f0;color:#666;border:0.5px solid #e5e5e5}
+.empty{color:#aaa;text-align:center;padding:2rem 0;font-size:14px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal{background:white;border-radius:16px;padding:1.5rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:500;margin-bottom:1rem}
+.field{margin-bottom:12px}
+.field label{font-size:12px;color:#888;display:block;margin-bottom:4px}
+.field input,.field select{width:100%;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;font-size:14px;font-family:system-ui,sans-serif}
+.dias-row{display:flex;gap:6px;flex-wrap:wrap}
+.dia-btn{padding:5px 10px;font-size:12px;border:0.5px solid #ddd;border-radius:20px;cursor:pointer;background:none;font-family:system-ui,sans-serif;color:#666}
+.dia-btn.sel{background:#1a1a1a;color:white;border-color:#1a1a1a}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:1rem}
+.pending-banner{background:#fef9c3;border:0.5px solid #fde047;border-radius:8px;padding:8px 12px;font-size:12px;color:#854d0e;margin-bottom:10px;display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Pilates</h1>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="sync-label" style="font-size:12px;opacity:0.7">online</span>
+      <div class="sync-dot" id="sync-dot"></div>
+    </div>
+  </div>
+
+  <div id="pending-banner" class="pending-banner">
+    Hay cambios pendientes de sincronizar...
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('asistencia',this)">Asistencia</button>
+    <button class="tab" onclick="showTab('alumnos',this)">Alumnos</button>
+    <button class="tab" onclick="showTab('cuotas',this)">Cuotas</button>
+    <button class="tab" onclick="showTab('caja',this)">Caja</button>
+  </div>
+
+  <div id="tab-asistencia" class="section active"></div>
+  <div id="tab-alumnos" class="section"></div>
+  <div id="tab-cuotas" class="section"></div>
+  <div id="tab-caja" class="section"></div>
+</div>
+
+<!-- Modal alumno -->
+<div class="modal-bg" id="modal-alumno" style="display:none" onclick="if(event.target===this)cerrarModal('modal-alumno')">
+  <div class="modal">
+    <h2 id="modal-alumno-title">Nuevo alumno</h2>
+    <div class="field"><label>Nombre completo</label><input id="a-nombre" type="text" placeholder="Ej: María García"></div>
+    <div class="field"><label>Teléfono (opcional)</label><input id="a-tel" type="text" placeholder="Ej: 3773 123456"></div>
+    <div class="field"><label>Horario</label>
+      <select id="a-horario">
+        <option>7:00</option><option>8:00</option><option selected>9:00</option>
+        <option>18:00</option><option>19:00</option><option>20:00</option>
+      </select>
+    </div>
+    <div class="field"><label>Plan</label>
+      <select id="a-plan">
+        <option value="2">2 veces por semana</option>
+        <option value="3">3 veces por semana</option>
+        <option value="5">Todos los días (lun-vie)</option>
+      </select>
+    </div>
+    <div class="field"><label>Días asignados</label>
+      <div class="dias-row" id="dias-row">
+        <button class="dia-btn" onclick="toggleDia(this)">L</button>
+        <button class="dia-btn" onclick="toggleDia(this)">Ma</button>
+        <button class="dia-btn" onclick="toggleDia(this)">Mi</button>
+        <button class="dia-btn" onclick="toggleDia(this)">J</button>
+        <button class="dia-btn" onclick="toggleDia(this)">V</button>
+        <button class="dia-btn" onclick="toggleDia(this)">S</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cerrarModal('modal-alumno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAlumno()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal movimiento -->
+<div class="modal-bg" id="modal-mov" style="display:none" onclick="if(event.target===this)cerrarModal('modal-mov')">
+  <div class="modal">
+    <h2>Registrar movimiento</h2>
+    <div class="field"><label>Tipo</label>
+      <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+    </div>
+    <div class="field"><label>Descripción</label><input id="m-desc" type="text" placeholder="Ej: Cuota María García"></div>
+    <div class="field"><label>Monto ($)</label><input id="m-monto" type="number" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cerrarModal('modal-mov')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarMovimiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gyhcnsgncuperzakwlvs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Xph4zt0QNx6jKsFx5eSo0g_5aiauDnd';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_SEMANA = ['D','L','Ma','Mi','J','V','S'];
+
+let isOnline = navigator.onLine;
+let state = { alumnos:[], asistencia:{}, cuotas:{}, movimientos:[], mesCuota:new Date().getMonth(), anioCuota:new Date().getFullYear(), editAlumnoId:null };
+let pendingOps = [];
+
+// IndexedDB
+let db;
+function initDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open('pilates_db',1);
+    req.onupgradeneeded = e=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains('alumnos')) d.createObjectStore('alumnos',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('asistencia')) d.createObjectStore('asistencia',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('cuotas')) d.createObjectStore('cuotas',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('movimientos')) d.createObjectStore('movimientos',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('pending')) d.createObjectStore('pending',{keyPath:'id',autoIncrement:true});
+    };
+    req.onsuccess = e=>{db=e.target.result;res()};
+    req.onerror = rej;
+  });
+}
+
+function dbGet(store){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess=()=>res(req.result);
+    req.onerror=rej;
+  });
+}
+
+function dbPut(store,data){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readwrite');
+    const s = tx.objectStore(store);
+    (Array.isArray(data)?data:[data]).forEach(item=>s.put(item));
+    tx.oncomplete=res;tx.onerror=rej;
+  });
+}
+
+function dbDelete(store,id){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readwrite');
+    tx.objectStore(store).delete(id);
+    tx.oncomplete=res;tx.onerror=rej;
+  });
+}
+
+function dbClearAndPut(store,data){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readwrite');
+    const s = tx.objectStore(store);
+    s.clear();
+    data.forEach(item=>s.put(item));
+    tx.oncomplete=res;tx.onerror=rej;
+  });
+}
+
+async function addPending(op){
+  pendingOps.push(op);
+  const tx = db.transaction('pending','readwrite');
+  tx.objectStore('pending').add(op);
+  updatePendingBanner();
+}
+
+async function loadPending(){
+  pendingOps = await dbGet('pending');
+  updatePendingBanner();
+}
+
+function updatePendingBanner(){
+  document.getElementById('pending-banner').style.display = pendingOps.length>0?'block':'none';
+}
+
+// Online/offline
+function updateOnlineStatus(){
+  isOnline = navigator.onLine;
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  dot.className = 'sync-dot'+(isOnline?'':' offline');
+  label.textContent = isOnline?'online':'offline';
+  if(isOnline) syncPending();
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+async function syncPending(){
+  if(!pendingOps.length) return;
+  setSyncing(true);
+  const done = [];
+  for(const op of pendingOps){
+    try{
+      if(op.action==='upsert') await sb.from(op.table).upsert(op.data);
+      if(op.action==='delete') await sb.from(op.table).delete().eq('id',op.id);
+      done.push(op.id);
+    }catch(e){console.warn('sync error',e);}
+  }
+  if(done.length){
+    const tx = db.transaction('pending','readwrite');
+    const s = tx.objectStore('pending');
+    done.forEach(id=>s.delete(id));
+    pendingOps = pendingOps.filter(o=>!done.includes(o.id));
+    updatePendingBanner();
+    await loadFromSupabase();
+  }
+  setSyncing(false);
+}
+
+function setSyncing(val){
+  document.getElementById('sync-dot').className='sync-dot'+(val?' syncing':isOnline?'':' offline');
+}
+
+// Cargar datos
+async function loadFromSupabase(){
+  try{
+    const [a,as,c,m] = await Promise.all([
+      sb.from('alumnos').select('*').order('nombre'),
+      sb.from('asistencia').select('*'),
+      sb.from('cuotas').select('*'),
+      sb.from('movimientos').select('*').order('fecha',{ascending:false}),
+    ]);
+    state.alumnos = a.data||[];
+    await dbClearAndPut('alumnos',state.alumnos);
+    const asMap={};
+    (as.data||[]).forEach(r=>{if(!asMap[r.fecha])asMap[r.fecha]={};asMap[r.fecha][r.alumno_id]={id:r.id,presente:r.presente}});
+    state.asistencia=asMap;
+    await dbClearAndPut('asistencia',as.data||[]);
+    const cMap={};
+    (c.data||[]).forEach(r=>{const k=r.anio+'-'+String(r.mes).padStart(2,'0');if(!cMap[k])cMap[k]={};cMap[k][r.alumno_id]={id:r.id,pagado:r.pagado}});
+    state.cuotas=cMap;
+    await dbClearAndPut('cuotas',c.data||[]);
+    state.movimientos=m.data||[];
+    await dbClearAndPut('movimientos',state.movimientos);
+    renderActive();
+  }catch(e){console.warn('Error cargando de Supabase',e);}
+}
+
+async function loadFromLocal(){
+  const [alumnos,asistencia,cuotas,movimientos] = await Promise.all([
+    dbGet('alumnos'),dbGet('asistencia'),dbGet('cuotas'),dbGet('movimientos')
+  ]);
+  state.alumnos = alumnos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const asMap={};
+  asistencia.forEach(r=>{if(!asMap[r.fecha])asMap[r.fecha]={};asMap[r.fecha][r.alumno_id]={id:r.id,presente:r.presente}});
+  state.asistencia=asMap;
+  const cMap={};
+  cuotas.forEach(r=>{const k=r.anio+'-'+String(r.mes).padStart(2,'0');if(!cMap[k])cMap[k]={};cMap[k][r.alumno_id]={id:r.id,pagado:r.pagado}});
+  state.cuotas=cMap;
+  state.movimientos=movimientos.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  renderActive();
+}
+
+function hoyStr(){
+  const h=new Date();
+  return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+}
+function iniciales(n){return n.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();}
+function planLabel(p){return p==='2'?'2 veces/sem':p==='3'?'3 veces/sem':'Todos los días';}
+function diaHoy(){return DIAS_SEMANA[new Date().getDay()];}
+
+let tabActual='asistencia';
+function showTab(t,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  btn.classList.add('active');
+  tabActual=t;
+  render(t);
+}
+function renderActive(){render(tabActual);}
+function render(t){
+  if(t==='asistencia')renderAsistencia();
+  if(t==='alumnos')renderAlumnos();
+  if(t==='cuotas')renderCuotas();
+  if(t==='caja')renderCaja();
+}
+
+// ASISTENCIA
+function renderAsistencia(){
+  const hoy=new Date();
+  const diaH=diaHoy();
+  const clave=hoyStr();
+  if(!state.asistencia[clave])state.asistencia[clave]={};
+  let alumnos=state.alumnos.filter(a=>a.dias&&a.dias.includes(diaH));
+  const presentes=alumnos.filter(a=>state.asistencia[clave][a.id]?.presente).length;
+
+  let html=`<div style="font-size:13px;color:#888;margin-bottom:4px">${DIAS_SEMANA[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()]}</div>
+  <div style="font-size:18px;font-weight:500;margin-bottom:1rem">Asistencia de hoy</div>
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-val">${alumnos.length}</div><div class="stat-lbl">Esperados</div></div>
+    <div class="stat"><div class="stat-val" style="color:#16a34a">${presentes}</div><div class="stat-lbl">Presentes</div></div>
+    <div class="stat"><div class="stat-val" style="color:#dc2626">${alumnos.length-presentes}</div><div class="stat-lbl">Ausentes</div></div>
+  </div>`;
+
+  if(alumnos.length===0){
+    html+='<div class="empty">No hay alumnos asignados para hoy</div>';
+  } else {
+    const grupos={};
+    alumnos.forEach(a=>{if(!grupos[a.horario])grupos[a.horario]=[];grupos[a.horario].push(a);});
+    Object.keys(grupos).sort().forEach(h=>{
+      html+=`<div style="font-size:12px;color:#888;margin:12px 0 6px">${h}</div><div class="card" style="padding:0.5rem 1rem">`;
+      grupos[h].forEach(a=>{
+        const pres=state.asistencia[clave][a.id]?.presente;
+        html+=`<div class="alumno-row">
+          <div class="avatar">${iniciales(a.nombre)}</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">${a.nombre}</div>
+          <div style="font-size:12px;color:#888">${planLabel(a.plan)}</div></div>
+          <div class="check ${pres?'presente':''}" onclick="toggleAsistencia('${a.id}','${clave}')">${pres?'✓':''}</div>
+        </div>`;
+      });
+      html+='</div>';
+    });
+  }
+  document.getElementById('tab-asistencia').innerHTML=html;
+}
+
+async function toggleAsistencia(alumnoId,clave){
+  if(!state.asistencia[clave])state.asistencia[clave]={};
+  const actual=state.asistencia[clave][alumnoId];
+  const nuevoPresente=!actual?.presente;
+  const fecha=clave;
+  const [anio,mes,dia]=fecha.split('-');
+
+  if(actual?.id){
+    const data={id:actual.id,alumno_id:alumnoId,fecha,presente:nuevoPresente};
+    state.asistencia[clave][alumnoId]={id:actual.id,presente:nuevoPresente};
+    await dbPut('asistencia',{...data});
+    if(isOnline){await sb.from('asistencia').update({presente:nuevoPresente}).eq('id',actual.id);}
+    else{await addPending({action:'upsert',table:'asistencia',data});}
+  } else {
+    const id=crypto.randomUUID();
+    const data={id,alumno_id:alumnoId,fecha,presente:true};
+    state.asistencia[clave][alumnoId]={id,presente:true};
+    await dbPut('asistencia',data);
+    if(isOnline){await sb.from('asistencia').insert(data);}
+    else{await addPending({action:'upsert',table:'asistencia',data});}
+  }
+  renderAsistencia();
+}
+
+// ALUMNOS
+function renderAlumnos(){
+  let html=`<div class="flex-between"><div style="font-size:18px;font-weight:500">Alumnos</div>
+  <button class="btn btn-primary" onclick="abrirModalAlumno()">+ Nuevo</button></div>`;
+  if(!state.alumnos.length){html+='<div class="empty">No hay alumnos aún</div>';}
+  else{
+    html+='<div class="card" style="padding:0.5rem 1rem">';
+    state.alumnos.forEach(a=>{
+      html+=`<div class="alumno-row">
+        <div class="avatar">${iniciales(a.nombre)}</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:500">${a.nombre}</div>
+        <div style="font-size:12px;color:#888;margin-top:2px">
+          <span class="horario-tag">${a.horario}</span>
+          <span style="margin-left:6px">${planLabel(a.plan)}</span>
+          <span style="color:#bbb;margin-left:4px">${(a.dias||[]).join(' ')}</span>
+        </div></div>
+        <button class="btn" style="font-size:12px;padding:4px 10px" onclick="editarAlumno('${a.id}')">Editar</button>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  document.getElementById('tab-alumnos').innerHTML=html;
+}
+
+function abrirModalAlumno(){
+  state.editAlumnoId=null;
+  document.getElementById('modal-alumno-title').textContent='Nuevo alumno';
+  document.getElementById('a-nombre').value='';
+  document.getElementById('a-tel').value='';
+  document.getElementById('a-horario').value='9:00';
+  document.getElementById('a-plan').value='2';
+  document.querySelectorAll('.dia-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('modal-alumno').style.display='flex';
+}
+
+function editarAlumno(id){
+  const a=state.alumnos.find(x=>x.id===id);if(!a)return;
+  state.editAlumnoId=id;
+  document.getElementById('modal-alumno-title').textContent='Editar alumno';
+  document.getElementById('a-nombre').value=a.nombre;
+  document.getElementById('a-tel').value=a.telefono||'';
+  document.getElementById('a-horario').value=a.horario;
+  document.getElementById('a-plan').value=a.plan;
+  document.querySelectorAll('.dia-btn').forEach(b=>b.classList.toggle('sel',(a.dias||[]).includes(b.textContent)));
+  document.getElementById('modal-alumno').style.display='flex';
+}
+
+function toggleDia(btn){btn.classList.toggle('sel');}
+function cerrarModal(id){document.getElementById(id).style.display='none';}
+
+async function guardarAlumno(){
+  const nombre=document.getElementById('a-nombre').value.trim();
+  if(!nombre){alert('Ingresá el nombre');return;}
+  const dias=[...document.querySelectorAll('.dia-btn.sel')].map(b=>b.textContent);
+  const data={
+    id:state.editAlumnoId||crypto.randomUUID(),
+    nombre,telefono:document.getElementById('a-tel').value.trim(),
+    horario:document.getElementById('a-horario').value,
+    plan:document.getElementById('a-plan').value,
+    dias
+  };
+  if(state.editAlumnoId){
+    const i=state.alumnos.findIndex(x=>x.id===state.editAlumnoId);
+    state.alumnos[i]=data;
+  } else {
+    state.alumnos.push(data);
+    state.alumnos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  }
+  await dbPut('alumnos',data);
+  if(isOnline){await sb.from('alumnos').upsert(data);}
+  else{await addPending({action:'upsert',table:'alumnos',data});}
+  cerrarModal('modal-alumno');
+  renderAlumnos();
+}
+
+// CUOTAS
+function renderCuotas(){
+  const m=state.mesCuota,a=state.anioCuota;
+  const clave=a+'-'+String(m+1).padStart(2,'0');
+  if(!state.cuotas[clave])state.cuotas[clave]={};
+  const pagaron=state.alumnos.filter(x=>state.cuotas[clave][x.id]?.pagado);
+  const deben=state.alumnos.filter(x=>!state.cuotas[clave][x.id]?.pagado);
+
+  let html=`<div class="flex-between">
+    <div style="font-size:18px;font-weight:500">Cuotas</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn" onclick="mesCuota(-1)">‹</button>
+      <button class="btn" onclick="mesCuota(1)">›</button>
+    </div>
+  </div>
+  <div style="font-size:13px;color:#888;margin-bottom:1rem">${MESES[m]} ${a}</div>
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-val">${state.alumnos.length}</div><div class="stat-lbl">Total</div></div>
+    <div class="stat"><div class="stat-val" style="color:#16a34a">${pagaron.length}</div><div class="stat-lbl">Al día</div></div>
+    <div class="stat"><div class="stat-val" style="color:#dc2626">${deben.length}</div><div class="stat-lbl">Adeudan</div></div>
+  </div>`;
+
+  if(deben.length){
+    html+='<div style="font-size:12px;color:#888;margin-bottom:6px">Adeudan</div><div class="card" style="padding:0.5rem 1rem">';
+    deben.forEach(a=>{
+      html+=`<div class="alumno-row">
+        <div class="avatar" style="width:30px;height:30px;font-size:11px">${iniciales(a.nombre)}</div>
+        <div style="flex:1;font-size:14px">${a.nombre}</div>
+        <span class="badge badge-danger" style="margin-right:8px">Debe</span>
+        <button class="btn btn-success" onclick="marcarCuota('${a.id}','${clave}',true)">Pagó</button>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  if(pagaron.length){
+    html+='<div style="font-size:12px;color:#888;margin:12px 0 6px">Al día</div><div class="card" style="padding:0.5rem 1rem">';
+    pagaron.forEach(a=>{
+      html+=`<div class="alumno-row">
+        <div class="avatar" style="width:30px;height:30px;font-size:11px">${iniciales(a.nombre)}</div>
+        <div style="flex:1;font-size:14px">${a.nombre}</div>
+        <span class="badge badge-ok" style="margin-right:8px">Pagó</span>
+        <button class="btn btn-undo" onclick="marcarCuota('${a.id}','${clave}',false)">Deshacer</button>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  document.getElementById('tab-cuotas').innerHTML=html;
+}
+
+function mesCuota(dir){
+  state.mesCuota+=dir;
+  if(state.mesCuota<0){state.mesCuota=11;state.anioCuota--;}
+  if(state.mesCuota>11){state.mesCuota=0;state.anioCuota++;}
+  renderCuotas();
+}
+
+async function marcarCuota(alumnoId,clave,pagado){
+  const [anio,mes]=clave.split('-');
+  if(!state.cuotas[clave])state.cuotas[clave]={};
+  const actual=state.cuotas[clave][alumnoId];
+  const id=actual?.id||crypto.randomUUID();
+  const data={id,alumno_id:alumnoId,mes:parseInt(mes),anio:parseInt(anio),pagado};
+  state.cuotas[clave][alumnoId]={id,pagado};
+  if(!pagado)delete state.cuotas[clave][alumnoId];
+  await dbPut('cuotas',data);
+  if(isOnline){await sb.from('cuotas').upsert(data);}
+  else{await addPending({action:'upsert',table:'cuotas',data});}
+  renderCuotas();
+}
+
+// CAJA
+function renderCaja(){
+  const ing=state.movimientos.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+Number(m.monto),0);
+  const egr=state.movimientos.filter(m=>m.tipo==='egreso').reduce((s,m)=>s+Number(m.monto),0);
+  let html=`<div class="flex-between"><div style="font-size:18px;font-weight:500">Caja</div>
+  <button class="btn btn-primary" onclick="abrirModalMov()">+ Registrar</button></div>
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-val ing">$${ing.toLocaleString('es-AR')}</div><div class="stat-lbl">Ingresos</div></div>
+    <div class="stat"><div class="stat-val egr">$${egr.toLocaleString('es-AR')}</div><div class="stat-lbl">Egresos</div></div>
+    <div class="stat"><div class="stat-val">$${(ing-egr).toLocaleString('es-AR')}</div><div class="stat-lbl">Saldo</div></div>
+  </div>
+  <div class="card" style="padding:0.5rem 1rem">`;
+  if(!state.movimientos.length){html+='<div class="empty">No hay movimientos</div>';}
+  else{
+    state.movimientos.forEach(m=>{
+      html+=`<div class="movimiento">
+        <div><div>${m.descripcion}</div><div style="font-size:12px;color:#aaa">${m.fecha}</div></div>
+        <span class="${m.tipo==='ingreso'?'ing':'egr'}">${m.tipo==='ingreso'?'+':'−'} $${Number(m.monto).toLocaleString('es-AR')}</span>
+      </div>`;
+    });
+  }
+  html+='</div>';
+  document.getElementById('tab-caja').innerHTML=html;
+}
+
+function abrirModalMov(){
+  document.getElementById('m-tipo').value='ingreso';
+  document.getElementById('m-desc').value='';
+  document.getElementById('m-monto').value='';
+  document.getElementById('modal-mov').style.display='flex';
+}
+
+async function guardarMovimiento(){
+  const desc=document.getElementById('m-desc').value.trim();
+  const monto=parseFloat(document.getElementById('m-monto').value);
+  if(!desc||!monto){alert('Completá descripción y monto');return;}
+  const data={id:crypto.randomUUID(),tipo:document.getElementById('m-tipo').value,descripcion:desc,monto,fecha:hoyStr()};
+  state.movimientos.unshift(data);
+  await dbPut('movimientos',data);
+  if(isOnline){await sb.from('movimientos').insert(data);}
+  else{await addPending({action:'upsert',table:'movimientos',data});}
+  cerrarModal('modal-mov');
+  renderCaja();
+}
+
+// Init
+async function init(){
+  await initDB();
+  await loadPending();
+  updateOnlineStatus();
+  await loadFromLocal();
+  if(isOnline) await loadFromSupabase();
+}
+init();
+</script>
+</body>
+</html>
