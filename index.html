@@ -31,7 +31,6 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-heigh
 .check.presente{background:#dcfce7;border-color:#86efac;color:#16a34a}
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
 .badge-ok{background:#dcfce7;color:#15803d}
-.badge-warn{background:#fef9c3;color:#854d0e}
 .badge-danger{background:#fee2e2;color:#b91c1c}
 .btn{padding:7px 14px;font-size:13px;border-radius:8px;cursor:pointer;border:0.5px solid #ddd;background:white;font-family:system-ui,sans-serif;color:#1a1a1a}
 .btn:hover{background:#f5f5f5}
@@ -57,21 +56,43 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-heigh
 .dia-btn.sel{background:#1a1a1a;color:white;border-color:#1a1a1a}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:1rem}
 .pending-banner{background:#fef9c3;border:0.5px solid #fde047;border-radius:8px;padding:8px 12px;font-size:12px;color:#854d0e;margin-bottom:10px;display:none}
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-box{background:white;border-radius:16px;border:0.5px solid #e5e5e5;padding:2rem;width:100%;max-width:360px}
+.login-box h1{font-size:20px;font-weight:500;margin-bottom:4px}
+.login-box p{font-size:13px;color:#888;margin-bottom:1.5rem}
+.login-error{background:#fee2e2;color:#b91c1c;font-size:13px;padding:8px 12px;border-radius:8px;margin-bottom:12px;display:none}
 </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <h1>Pilates</h1>
+    <p>Ingresá para continuar</p>
+    <div id="login-error" class="login-error">Usuario o contraseña incorrectos</div>
+    <div class="field"><label>Usuario</label><input id="l-user" type="text" placeholder="Usuario" autocomplete="username"></div>
+    <div class="field"><label>Contraseña</label><input id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="main-app" style="display:none">
 <div class="app">
   <div class="header">
     <h1>Pilates</h1>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span id="sync-label" style="font-size:12px;opacity:0.7">online</span>
-      <div class="sync-dot" id="sync-dot"></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="doLogout()" style="font-size:12px;background:none;border:0.5px solid rgba(255,255,255,0.3);color:white;padding:4px 10px;border-radius:6px;cursor:pointer">Salir</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="sync-label" style="font-size:12px;opacity:0.7">online</span>
+        <div class="sync-dot" id="sync-dot"></div>
+      </div>
     </div>
   </div>
 
-  <div id="pending-banner" class="pending-banner">
-    Hay cambios pendientes de sincronizar...
-  </div>
+  <div id="pending-banner" class="pending-banner">Hay cambios pendientes de sincronizar...</div>
 
   <div class="tab-bar">
     <button class="tab active" onclick="showTab('asistencia',this)">Asistencia</button>
@@ -85,6 +106,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-heigh
   <div id="tab-cuotas" class="section"></div>
   <div id="tab-caja" class="section"></div>
 </div>
+</div>
 
 <!-- Modal alumno -->
 <div class="modal-bg" id="modal-alumno" style="display:none" onclick="if(event.target===this)cerrarModal('modal-alumno')">
@@ -92,11 +114,46 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;min-heigh
     <h2 id="modal-alumno-title">Nuevo alumno</h2>
     <div class="field"><label>Nombre completo</label><input id="a-nombre" type="text" placeholder="Ej: María García"></div>
     <div class="field"><label>Teléfono (opcional)</label><input id="a-tel" type="text" placeholder="Ej: 3773 123456"></div>
-    <div class="field"><label>Horario</label>
-      <select id="a-horario">
-        <option>7:00</option><option>8:00</option><option selected>9:00</option>
-        <option>18:00</option><option>19:00</option><option>20:00</option>
+    <div class="field">
+      <label>Horario</label>
+      <select id="a-horario" onchange="checkHorarioCustom()">
+        <option value="7:00">7:00</option>
+        <option value="7:30">7:30</option>
+        <option value="8:00">8:00</option>
+        <option value="8:30">8:30</option>
+        <option value="9:00">9:00</option>
+        <option value="9:30">9:30</option>
+        <option value="10:00">10:00</option>
+        <option value="10:30">10:30</option>
+        <option value="11:00">11:00</option>
+        <option value="11:30">11:30</option>
+        <option value="12:00">12:00</option>
+        <option value="12:30">12:30</option>
+        <option value="13:00">13:00</option>
+        <option value="13:30">13:30</option>
+        <option value="14:00">14:00</option>
+        <option value="14:30">14:30</option>
+        <option value="15:00">15:00</option>
+        <option value="15:30">15:30</option>
+        <option value="16:00">16:00</option>
+        <option value="16:30">16:30</option>
+        <option value="17:00">17:00</option>
+        <option value="17:30">17:30</option>
+        <option value="18:00">18:00</option>
+        <option value="18:30">18:30</option>
+        <option value="19:00">19:00</option>
+        <option value="19:30">19:30</option>
+        <option value="20:00">20:00</option>
+        <option value="20:30">20:30</option>
+        <option value="21:00">21:00</option>
+        <option value="21:30">21:30</option>
+        <option value="22:00">22:00</option>
+        <option value="otro">Otro...</option>
       </select>
+    </div>
+    <div class="field" id="horario-custom-field" style="display:none">
+      <label>Escribí el horario</label>
+      <input id="a-horario-custom" type="text" placeholder="Ej: 6:30">
     </div>
     <div class="field"><label>Plan</label>
       <select id="a-plan">
@@ -143,12 +200,54 @@ const SUPABASE_URL = 'https://gyhcnsgncuperzakwlvs.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Xph4zt0QNx6jKsFx5eSo0g_5aiauDnd';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const LOGIN_USER = 'IvanMontiel';
+const LOGIN_PASS = '37586965';
+
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DIAS_SEMANA = ['D','L','Ma','Mi','J','V','S'];
 
 let isOnline = navigator.onLine;
 let state = { alumnos:[], asistencia:{}, cuotas:{}, movimientos:[], mesCuota:new Date().getMonth(), anioCuota:new Date().getFullYear(), editAlumnoId:null };
 let pendingOps = [];
+
+// LOGIN
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value;
+  if(u===LOGIN_USER && p===LOGIN_PASS){
+    sessionStorage.setItem('pilates_auth','1');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-app').style.display='block';
+    init();
+  } else {
+    document.getElementById('login-error').style.display='block';
+  }
+}
+function doLogout(){
+  sessionStorage.removeItem('pilates_auth');
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+}
+document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('l-user').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+if(sessionStorage.getItem('pilates_auth')==='1'){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  init();
+}
+
+// HORARIO CUSTOM
+function checkHorarioCustom(){
+  const val=document.getElementById('a-horario').value;
+  document.getElementById('horario-custom-field').style.display=val==='otro'?'block':'none';
+}
+function getHorarioSeleccionado(){
+  const sel=document.getElementById('a-horario').value;
+  if(sel==='otro') return document.getElementById('a-horario-custom').value.trim();
+  return sel;
+}
 
 // IndexedDB
 let db;
@@ -167,75 +266,60 @@ function initDB(){
     req.onerror = rej;
   });
 }
-
 function dbGet(store){
   return new Promise((res,rej)=>{
-    const tx = db.transaction(store,'readonly');
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess=()=>res(req.result);
-    req.onerror=rej;
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).getAll();
+    req.onsuccess=()=>res(req.result);req.onerror=rej;
   });
 }
-
 function dbPut(store,data){
   return new Promise((res,rej)=>{
-    const tx = db.transaction(store,'readwrite');
-    const s = tx.objectStore(store);
+    const tx=db.transaction(store,'readwrite');
+    const s=tx.objectStore(store);
     (Array.isArray(data)?data:[data]).forEach(item=>s.put(item));
     tx.oncomplete=res;tx.onerror=rej;
   });
 }
-
-function dbDelete(store,id){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(store,'readwrite');
-    tx.objectStore(store).delete(id);
-    tx.oncomplete=res;tx.onerror=rej;
-  });
-}
-
 function dbClearAndPut(store,data){
   return new Promise((res,rej)=>{
-    const tx = db.transaction(store,'readwrite');
-    const s = tx.objectStore(store);
+    const tx=db.transaction(store,'readwrite');
+    const s=tx.objectStore(store);
     s.clear();
     data.forEach(item=>s.put(item));
     tx.oncomplete=res;tx.onerror=rej;
   });
 }
-
 async function addPending(op){
   pendingOps.push(op);
-  const tx = db.transaction('pending','readwrite');
+  const tx=db.transaction('pending','readwrite');
   tx.objectStore('pending').add(op);
   updatePendingBanner();
 }
-
 async function loadPending(){
-  pendingOps = await dbGet('pending');
+  pendingOps=await dbGet('pending');
   updatePendingBanner();
 }
-
 function updatePendingBanner(){
-  document.getElementById('pending-banner').style.display = pendingOps.length>0?'block':'none';
+  document.getElementById('pending-banner').style.display=pendingOps.length>0?'block':'none';
 }
 
 // Online/offline
 function updateOnlineStatus(){
-  isOnline = navigator.onLine;
-  const dot = document.getElementById('sync-dot');
-  const label = document.getElementById('sync-label');
-  dot.className = 'sync-dot'+(isOnline?'':' offline');
-  label.textContent = isOnline?'online':'offline';
+  isOnline=navigator.onLine;
+  const dot=document.getElementById('sync-dot');
+  const label=document.getElementById('sync-label');
+  dot.className='sync-dot'+(isOnline?'':' offline');
+  label.textContent=isOnline?'online':'offline';
   if(isOnline) syncPending();
 }
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
+window.addEventListener('online',updateOnlineStatus);
+window.addEventListener('offline',updateOnlineStatus);
 
 async function syncPending(){
-  if(!pendingOps.length) return;
+  if(!pendingOps.length)return;
   setSyncing(true);
-  const done = [];
+  const done=[];
   for(const op of pendingOps){
     try{
       if(op.action==='upsert') await sb.from(op.table).upsert(op.data);
@@ -244,30 +328,28 @@ async function syncPending(){
     }catch(e){console.warn('sync error',e);}
   }
   if(done.length){
-    const tx = db.transaction('pending','readwrite');
-    const s = tx.objectStore('pending');
+    const tx=db.transaction('pending','readwrite');
+    const s=tx.objectStore('pending');
     done.forEach(id=>s.delete(id));
-    pendingOps = pendingOps.filter(o=>!done.includes(o.id));
+    pendingOps=pendingOps.filter(o=>!done.includes(o.id));
     updatePendingBanner();
     await loadFromSupabase();
   }
   setSyncing(false);
 }
-
 function setSyncing(val){
   document.getElementById('sync-dot').className='sync-dot'+(val?' syncing':isOnline?'':' offline');
 }
 
-// Cargar datos
 async function loadFromSupabase(){
   try{
-    const [a,as,c,m] = await Promise.all([
+    const [a,as,c,m]=await Promise.all([
       sb.from('alumnos').select('*').order('nombre'),
       sb.from('asistencia').select('*'),
       sb.from('cuotas').select('*'),
       sb.from('movimientos').select('*').order('fecha',{ascending:false}),
     ]);
-    state.alumnos = a.data||[];
+    state.alumnos=a.data||[];
     await dbClearAndPut('alumnos',state.alumnos);
     const asMap={};
     (as.data||[]).forEach(r=>{if(!asMap[r.fecha])asMap[r.fecha]={};asMap[r.fecha][r.alumno_id]={id:r.id,presente:r.presente}});
@@ -284,10 +366,10 @@ async function loadFromSupabase(){
 }
 
 async function loadFromLocal(){
-  const [alumnos,asistencia,cuotas,movimientos] = await Promise.all([
+  const [alumnos,asistencia,cuotas,movimientos]=await Promise.all([
     dbGet('alumnos'),dbGet('asistencia'),dbGet('cuotas'),dbGet('movimientos')
   ]);
-  state.alumnos = alumnos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  state.alumnos=alumnos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const asMap={};
   asistencia.forEach(r=>{if(!asMap[r.fecha])asMap[r.fecha]={};asMap[r.fecha][r.alumno_id]={id:r.id,presente:r.presente}});
   state.asistencia=asMap;
@@ -367,12 +449,10 @@ async function toggleAsistencia(alumnoId,clave){
   const actual=state.asistencia[clave][alumnoId];
   const nuevoPresente=!actual?.presente;
   const fecha=clave;
-  const [anio,mes,dia]=fecha.split('-');
-
   if(actual?.id){
     const data={id:actual.id,alumno_id:alumnoId,fecha,presente:nuevoPresente};
     state.asistencia[clave][alumnoId]={id:actual.id,presente:nuevoPresente};
-    await dbPut('asistencia',{...data});
+    await dbPut('asistencia',data);
     if(isOnline){await sb.from('asistencia').update({presente:nuevoPresente}).eq('id',actual.id);}
     else{await addPending({action:'upsert',table:'asistencia',data});}
   } else {
@@ -417,6 +497,8 @@ function abrirModalAlumno(){
   document.getElementById('a-tel').value='';
   document.getElementById('a-horario').value='9:00';
   document.getElementById('a-plan').value='2';
+  document.getElementById('horario-custom-field').style.display='none';
+  document.getElementById('a-horario-custom').value='';
   document.querySelectorAll('.dia-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('modal-alumno').style.display='flex';
 }
@@ -427,9 +509,17 @@ function editarAlumno(id){
   document.getElementById('modal-alumno-title').textContent='Editar alumno';
   document.getElementById('a-nombre').value=a.nombre;
   document.getElementById('a-tel').value=a.telefono||'';
-  document.getElementById('a-horario').value=a.horario;
   document.getElementById('a-plan').value=a.plan;
   document.querySelectorAll('.dia-btn').forEach(b=>b.classList.toggle('sel',(a.dias||[]).includes(b.textContent)));
+  const horarioOpts=[...document.getElementById('a-horario').options].map(o=>o.value);
+  if(horarioOpts.includes(a.horario)){
+    document.getElementById('a-horario').value=a.horario;
+    document.getElementById('horario-custom-field').style.display='none';
+  } else {
+    document.getElementById('a-horario').value='otro';
+    document.getElementById('horario-custom-field').style.display='block';
+    document.getElementById('a-horario-custom').value=a.horario;
+  }
   document.getElementById('modal-alumno').style.display='flex';
 }
 
@@ -439,13 +529,13 @@ function cerrarModal(id){document.getElementById(id).style.display='none';}
 async function guardarAlumno(){
   const nombre=document.getElementById('a-nombre').value.trim();
   if(!nombre){alert('Ingresá el nombre');return;}
+  const horario=getHorarioSeleccionado();
+  if(!horario){alert('Ingresá el horario');return;}
   const dias=[...document.querySelectorAll('.dia-btn.sel')].map(b=>b.textContent);
   const data={
     id:state.editAlumnoId||crypto.randomUUID(),
     nombre,telefono:document.getElementById('a-tel').value.trim(),
-    horario:document.getElementById('a-horario').value,
-    plan:document.getElementById('a-plan').value,
-    dias
+    horario,plan:document.getElementById('a-plan').value,dias
   };
   if(state.editAlumnoId){
     const i=state.alumnos.findIndex(x=>x.id===state.editAlumnoId);
@@ -523,8 +613,8 @@ async function marcarCuota(alumnoId,clave,pagado){
   const actual=state.cuotas[clave][alumnoId];
   const id=actual?.id||crypto.randomUUID();
   const data={id,alumno_id:alumnoId,mes:parseInt(mes),anio:parseInt(anio),pagado};
-  state.cuotas[clave][alumnoId]={id,pagado};
-  if(!pagado)delete state.cuotas[clave][alumnoId];
+  if(pagado){state.cuotas[clave][alumnoId]={id,pagado};}
+  else{delete state.cuotas[clave][alumnoId];}
   await dbPut('cuotas',data);
   if(isOnline){await sb.from('cuotas').upsert(data);}
   else{await addPending({action:'upsert',table:'cuotas',data});}
@@ -576,7 +666,7 @@ async function guardarMovimiento(){
   renderCaja();
 }
 
-// Init
+// INIT
 async function init(){
   await initDB();
   await loadPending();
@@ -584,7 +674,6 @@ async function init(){
   await loadFromLocal();
   if(isOnline) await loadFromSupabase();
 }
-init();
 </script>
 </body>
 </html>
